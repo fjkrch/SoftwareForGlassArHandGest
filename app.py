@@ -13,7 +13,7 @@ from mediapipe.python.solutions import drawing_utils as mp_drawing
 # ----------------- constants -----------------
 FINGER_TIPS = [4, 8, 12, 16, 20]
 TIP_NAMES = {4:"Thumb", 8:"Index", 12:"Middle", 16:"Ring", 20:"Pinky"}
-TOLERANCE = 0.07
+TOLERANCE = 0.15
 CHECK_INTERVAL = 1.0  # speak check every 1 second
 
 # -------------- TTS engines (no pyttsx3) --------------
@@ -113,28 +113,8 @@ def within_tol(curr, ref, tol=TOLERANCE):
         if abs(cz - rz) > tol: return False
     return True
 
-GESTURE_REFS = {
-    "STOP":[
-        (0.000,0.000,0.000),(0.018,-0.139,-0.000),(0.034,-0.169,-0.002),
-        (0.069,-0.147,-0.006),(0.097,-0.084,-0.007)
-    ],
-    "OKAY":[
-        (0.000,0.000,0.000),(0.009,-0.041,-0.027),(0.024,-0.243,-0.011),
-        (0.078,-0.275,-0.005),(0.159,-0.249,-0.006)
-    ],
-    "PAIN":[
-        (0.000,0.000,0.000),(-0.018,0.050,-0.003),(0.006,0.037,0.017),
-        (0.034,0.040,0.026),(0.060,0.013,0.035)
-    ],
-    "Hurt a lot":[
-        (0.000,0.000,0.000),(0.035,-0.308,-0.002),(0.117,-0.038,0.007),
-        (0.141,-0.030,0.019),(0.159,-0.025,0.004)
-    ],
-    "Hurt a a little":[
-        (0.000,0.000,0.000),(0.005,-0.069,-0.002),(0.112,0.032,0.010),
-        (0.127,0.042,0.021),(0.136,0.051,0.002)
-    ],
-}
+# import gesture references from separate file
+from gesture_refs import GESTURE_REFS
 
 def classify_gesture(curr_tips):
     for name, ref in GESTURE_REFS.items():
