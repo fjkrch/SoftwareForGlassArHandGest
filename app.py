@@ -5,6 +5,7 @@ import queue
 import platform
 import subprocess
 import sys
+import speech_recognition as sr  # Add this import
 
 # --- IMPORTANT: import MediaPipe SOLUTIONS directly (won't pull TensorFlow) ---
 from mediapipe.python.solutions import hands as mp_hands
@@ -122,6 +123,40 @@ def classify_gesture(curr_tips):
             return name
     return None
 
+# -------------- speech listener --------------
+class SpeechListener:
+    def __init__(self):
+        self.recognizer = sr.Recognizer()
+        self._stop = threading.Event()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.last_text = ""  # Add this to store latest recognized text
+
+    def start(self):
+        self.thread.start()
+
+    def stop(self):
+        self._stop.set()
+        self.thread.join(timeout=2.0)
+
+    def get_last_text(self):  # Add getter for latest text
+        return self.last_text
+
+    def _run(self):
+        while not self._stop.is_set():
+            try:
+                with sr.Microphone() as source:
+                    self.recognizer.adjust_for_ambient_noise(source)
+                    audio = self.recognizer.listen(source)
+                    text = self.recognizer.recognize_google(audio)
+                    if text != "Listening...":  # Only update if not "Listening..."
+                        self.last_text = text
+            except sr.RequestError:
+                print("API unavailable") 
+            except sr.UnknownValueError:
+                pass
+            except Exception as e:
+                print(f"Speech error: {e}")
+
 # -------------- main --------------
 def main():
     cap = cv.VideoCapture(0, cv.CAP_DSHOW)  # CAP_DSHOW helps on Windows
@@ -130,6 +165,10 @@ def main():
 
     tts = SpeechWorker()
     tts.start()
+
+    # Add speech listener
+    speech = SpeechListener()
+    speech.start()
 
     last_spoken = None
     last_check_time = 0.0
@@ -192,6 +231,29 @@ def main():
                 cv.putText(debug, f'FPS: {int(fps)}', (10, 30),
                            cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv.LINE_AA)
 
+                # Add subtitle to frame (after other UI elements)
+                speech_text = speech.get_last_text()
+                if speech_text:
+                    # Split long text into multiple lines if needed
+                    y_pos = debug.shape[0] - 50  # 50 pixels from bottom
+                    words = speech_text.split()
+                    lines = []
+                    current_line = []
+                    
+                    for word in words:
+                        current_line.append(word)
+                        if len(" ".join(current_line)) > 40:  # Max ~40 chars per line
+                            lines.append(" ".join(current_line[:-1]))
+                            current_line = [word]
+                    if current_line:
+                        lines.append(" ".join(current_line))
+                    
+                    # Draw each line
+                    for line in lines:
+                        cv.putText(debug, line, (50, y_pos),
+                                  cv.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv.LINE_AA)
+                        y_pos -= 30  # Move up for next line
+            
                 cv.imshow("Sign Speak (solutions import + SAPI TTS)", debug)
                 key = cv.waitKey(1) & 0xFF
 
@@ -214,6 +276,7 @@ def main():
             pass
         cv.destroyAllWindows()
         tts.stop()
+        speech.stop()  # Stop speech listener
 
 if __name__ == "__main__":
     main()
