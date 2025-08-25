@@ -13,7 +13,7 @@ from mediapipe.python.solutions import drawing_utils as mp_drawing
 # ----------------- constants -----------------
 FINGER_TIPS = [4, 8, 12, 16, 20]
 TIP_NAMES = {4:"Thumb", 8:"Index", 12:"Middle", 16:"Ring", 20:"Pinky"}
-TOLERANCE = 0.15
+TOLERANCE = 0.10
 CHECK_INTERVAL = 1.0  # speak check every 1 second
 
 # -------------- TTS engines (no pyttsx3) --------------
@@ -155,6 +155,7 @@ def main():
                 results = hands.process(rgb)
 
                 gesture = "No hand detected"
+                tips_rel = None
                 if results.multi_hand_landmarks:
                     hand_lms = results.multi_hand_landmarks[0]
                     mp_drawing.draw_landmarks(debug, hand_lms, mp_hands.HAND_CONNECTIONS)
@@ -193,6 +194,14 @@ def main():
 
                 cv.imshow("Sign Speak (solutions import + SAPI TTS)", debug)
                 key = cv.waitKey(1) & 0xFF
+
+                # Press 's' to print relative-to-thumb coordinates in one-line tuple form
+                if key == ord('s'):
+                    if tips_rel:
+                        print(",".join(f"({r[0]:.3f},{r[1]:.3f},{r[2]:.3f})" for r in tips_rel))
+                    else:
+                        print("No hand data")
+
                 if key == 27:  # ESC
                     break
 
