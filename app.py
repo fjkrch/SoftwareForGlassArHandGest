@@ -14,7 +14,7 @@ from mediapipe.python.solutions import drawing_utils as mp_drawing
 # ----------------- constants -----------------
 FINGER_TIPS = [4, 8, 12, 16, 20]
 TIP_NAMES = {4:"Thumb", 8:"Index", 12:"Middle", 16:"Ring", 20:"Pinky"}
-TOLERANCE = 0.10
+TOLERANCE = 0.10  # Absolute tolerance for coordinate differences
 CHECK_INTERVAL = 1.0  # speak check every 1 second
 
 # -------------- TTS engines (no pyttsx3) --------------
@@ -97,18 +97,21 @@ class SpeechWorker:
                 print(f"[TTS] speak error: {e}", file=sys.stderr)
 
 # -------------- gesture helpers --------------
-def relative_to_thumb(hand_lms):
-    thumb = hand_lms.landmark[4]
+def relative_to_palm(hand_lms):
+    # Use wrist (landmark 0) as palm reference point
+    # Wrist is the most stable part of the palm area
+    palm_center = hand_lms.landmark[0]  # Wrist landmark
     return [
-        (hand_lms.landmark[idx].x - thumb.x,
-         hand_lms.landmark[idx].y - thumb.y,
-         hand_lms.landmark[idx].z - thumb.z)
+        (hand_lms.landmark[idx].x - palm_center.x,
+         hand_lms.landmark[idx].y - palm_center.y,
+         hand_lms.landmark[idx].z - palm_center.z)
         for idx in FINGER_TIPS
     ]
 
 def within_tol(curr, ref, tol=TOLERANCE):
-    if len(curr) != 5 or len(ref) != 5: return False
-    for (cx,cy,cz),(rx,ry,rz) in zip(curr, ref):
+    if len(curr) != 5 or len(ref) != 5:
+        return False
+    for (cx, cy, cz), (rx, ry, rz) in zip(curr, ref):
         if abs(cx - rx) > tol: return False
         if abs(cy - ry) > tol: return False
         if abs(cz - rz) > tol: return False
@@ -208,7 +211,7 @@ def main():
                         cv.putText(debug, TIP_NAMES[idx], (x_px + 6, y_px - 6),
                                    cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv.LINE_AA)
 
-                    tips_rel = relative_to_thumb(hand_lms)
+                    tips_rel = relative_to_palm(hand_lms)
                     g = classify_gesture(tips_rel)
                     if g: gesture = g
 
